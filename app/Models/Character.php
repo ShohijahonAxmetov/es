@@ -16,6 +16,11 @@ class Character extends Model
 
     public function answerQuestions()
     {
-    	return $this->belongsToMany(Question::class);
+    	return $this->belongsToMany(AnswerQuestion::class, 'answer_question_character', 'character_id', 'answer_question_id');
+    }
+
+    public function propertyValue()
+    {
+    	return $this->belongsToMany(PropertyValue::class);
     }
 }

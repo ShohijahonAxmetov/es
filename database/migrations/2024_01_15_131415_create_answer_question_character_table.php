@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('answer_question_character', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('answer_question_id')->constrained();
+            $table->foreignId('answer_question_id')->constrained('answer_question');
             $table->foreignId('character_id')->constrained();
             $table->float('probability');
             $table->softDeletes();
