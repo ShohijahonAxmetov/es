@@ -16,7 +16,7 @@ class Character extends Model
 
     public function answerQuestions()
     {
-    	return $this->belongsToMany(AnswerQuestion::class, 'answer_question_character', 'character_id', 'answer_question_id');
+    	return $this->belongsToMany(AnswerQuestion::class, 'answer_question_character', 'character_id', 'answer_question_id')->withPivot('probability');
     }
 
     public function propertyValue()

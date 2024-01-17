@@ -39,6 +39,16 @@ class QuestionSeeder extends Seeder
         		'property_id' => 1,
         		'question' => 'Выше 1.7м?',
         	],
+        	// [
+        	// 	'id' => 6,
+        	// 	'property_id' => 1,
+        	// 	'question' => 'Носит классические одежды?',
+        	// ],
+        	// [
+        	// 	'id' => 7,
+        	// 	'property_id' => 1,
+        	// 	'question' => 'Имеется личный вертолет?',
+        	// ],
         ];
 
         foreach ($data as $key => $item) {
