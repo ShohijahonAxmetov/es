@@ -35,9 +35,10 @@ class Controller extends BaseController
     		$answer = Answer::find($request->input('answer'));
     		if (!$answer) return response('Answer not found');
 
-    		$result = $this->handleAnswer($request, $characters);
+    		$characters = $this->handleAnswer($request, $characters);
 
-    		$questionId = $request->input('question') + 1;
+    		// $questionId = $request->input('question') + 1;
+    		$questionId = $this->getNextQuestionId($characters);
     	} else {
     		session()->flush();
     	}
@@ -63,6 +64,8 @@ class Controller extends BaseController
 		$characters = $this->calc($characters, $request->input('question'), $request->input('answer'));
 
 		session(['characters' => $characters]);
+
+		return $characters;
     }		
 
     public function calc($characters, $questionId, $answerId)
@@ -92,5 +95,90 @@ class Controller extends BaseController
     	}
 
     	return $P;
+    }
+
+
+
+    public function getNextQuestionId($characters)
+    {
+    	/*
+    	 * НАЙТИ ОЖИДАЕМЫЕ TARGETЫ ПЕРСОНАЖЕЙ, ЕСЛИ ЗАДАН ВОПРОС q И ДАН ОТВЕТ ans
+    	 */
+
+    	// $data = [
+    	// 	'answer_question_id' => 1,
+    	// 	'character_id' => 1,
+    	// 	'predict_target' => 0.8
+    	// ];
+    	$data = [];
+
+    	foreach ($characters as $character) {
+    		$target = $character->target;
+
+			foreach (AnswerQuestion::all() as $answerQuestion) {
+
+				$P = $this->PCalc($characters, $answerQuestion);
+
+				$data[] = [
+					'answer_question_id' => $answerQuestion->id,
+					'character_id' => $character->id,
+					'predict_target' => $character->answerQuestions->where('id', $answerQuestion->id)->first()->pivot->probability * $target / $P
+				];
+			}	
+    	}
+
+    	/*
+    	 * ФОРМАТИРОВАТЬ ДАННЫЕ ВЫЧИСЛИТЬ ЭНТРОПИЮ
+    	 */
+
+    	// $formattedData = [
+    	// 	'answer_question_id' => 1,
+    	// 	'targets' => [
+    	// 		[
+    	// 			'character_id' => 1,
+    	// 			'predict_target' => 0.65
+    	// 		],
+    	// 		[
+    	// 			'character_id' => 2,
+    	// 			'predict_target' => 0.39
+    	// 		]
+    	// 	],
+    	//  'entropy' => 1.9
+    	// ];
+    	$formattedData = [];
+    	$counter = 0;
+    	foreach (AnswerQuestion::all() as $answerQuestion) {
+    		$formattedData[$counter]['answer_question_id'] = $answerQuestion->id;
+
+			foreach ($data as $item) {
+				if ($item['answer_question_id'] == $answerQuestion->id) $tempArray[] = $item;
+	    	}
+
+			$formattedData[$counter]['targets'] = $tempArray;
+
+			$targets = array_map(function($target) { return $target['predict_target']; }, $tempArray);
+			$formattedData[$counter]['entropy'] = $this->HCalc($targets);
+
+	    	$counter ++;
+	    	unset($tempArray);
+    	}
+
+    	$dataWithMinEntropy = $formattedData[0];
+    	foreach ($formattedData as $value) {
+    		if ($dataWithMinEntropy['entropy'] > $value['entropy']) $dataWithMinEntropy = $value;
+    	}
+    	
+    	return AnswerQuestion::find($dataWithMinEntropy['answer_question_id'])->question_id;
+    }
+
+    public function HCalc(array $targets)
+    {
+    	$result = 0;
+
+    	foreach ($targets as $value) {
+    		$result += $value * log (1/$value, 2);
+    	}
+
+    	return $result;
     }
 }
