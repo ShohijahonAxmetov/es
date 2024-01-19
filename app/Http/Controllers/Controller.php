@@ -35,7 +35,25 @@ class Controller extends BaseController
     		$answer = Answer::find($request->input('answer'));
     		if (!$answer) return response('Answer not found');
 
+    		/*
+    		 * СОХРАНИТЬ В СЕССИЮ ЗАДАННЫЕ ВОПРОСЫ, ЧТОБЫ ВОПРОСЫ НЕ ПОВТОРЯЛИСЬ
+    		 */
+
+    		$questions = session()->has('questions') ? session('questions') : [];
+    		$questions[] = $request->input('question');
+    		session(['questions' => $questions]);
+
+
+			/*
+    		 * ОБРАБОТКА ОТВЕТА
+    		 */
+
     		$characters = $this->handleAnswer($request, $characters);
+
+
+    		/*
+    		 * НАЙТИ СЛЕДУЮЩИЙ ВОПРОС
+    		 */
 
     		// $questionId = $request->input('question') + 1;
     		$questionId = $this->getNextQuestionId($characters);
@@ -115,11 +133,13 @@ class Controller extends BaseController
     	foreach ($characters as $character) {
     		$target = $character->target;
 
-			foreach (AnswerQuestion::all() as $answerQuestion) {
+    		$answerQuestions = session()->has('questions') ? AnswerQuestion::whereNotIn('question_id', session('questions'))->with('question')->get() : AnswerQuestion::with('question')->get();
+			foreach ($answerQuestions as $answerQuestion) {
 
 				$P = $this->PCalc($characters, $answerQuestion);
 
 				$data[] = [
+					'answert_question' => $answerQuestion,
 					'answer_question_id' => $answerQuestion->id,
 					'character_id' => $character->id,
 					'predict_target' => $character->answerQuestions->where('id', $answerQuestion->id)->first()->pivot->probability * $target / $P
@@ -147,8 +167,9 @@ class Controller extends BaseController
     	// ];
     	$formattedData = [];
     	$counter = 0;
-    	foreach (AnswerQuestion::all() as $answerQuestion) {
+    	foreach ($answerQuestions as $answerQuestion) {
     		$formattedData[$counter]['answer_question_id'] = $answerQuestion->id;
+    		$formattedData[$counter]['answer_question'] = $answerQuestion;
 
 			foreach ($data as $item) {
 				if ($item['answer_question_id'] == $answerQuestion->id) $tempArray[] = $item;
@@ -162,6 +183,24 @@ class Controller extends BaseController
 	    	$counter ++;
 	    	unset($tempArray);
     	}
+
+    	/*
+    	 * ВОЗВРАЩАЕМ 0, ТАК КАК НЕ ОСТАЛОСЬ ВОПРОСОВ
+    	 */
+
+    	if (!isset($formattedData[0])) return 0;
+
+    	// $dataForCalcEntropy = [];
+    	// $counter = 0;
+    	// foreach ($formattedData as $item) {
+    	// 	foreach (Question::all() as $question) {
+    	// 		if ($question->id == $item['answer_question']->question_id) {
+    	// 			$dataForCalcEntropy[$counter]['question_id'] = 
+    	// 		}
+    	// 	}
+
+    	// 	$counter ++;
+    	// }
 
     	$dataWithMinEntropy = $formattedData[0];
     	foreach ($formattedData as $value) {

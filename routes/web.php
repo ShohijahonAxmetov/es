@@ -18,3 +18,6 @@ Route::get('/', function () {
 });
 
 Route::get('start', [\App\Http\Controllers\Controller::class, 'start']);
+Route::get('get-session/{session}', function($session) {
+	return response(session($session));
+});

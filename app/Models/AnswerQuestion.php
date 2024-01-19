@@ -16,6 +16,11 @@ class AnswerQuestion extends Model
     	'question_id',
     ];
 
+    public function question()
+    {
+    	return $this->belongsTo(Question::class);
+    }
+
     public function characters()
     {
     	return $this->belongsToMany(Character::class, 'answer_question_character', 'answer_question_id', 'character_id');
